@@ -22,12 +22,16 @@ public class WordGridView extends GridView {
     private MyAdapter mMyAdapter;
     private Animation mScaleAnimation;
 
+    private WordButtonClickListener mListener;
+
     public WordGridView(Context context) {
         this(context, null);
     }
+
     public WordGridView(Context context, AttributeSet attrs, int defStyle) {
         this(context, attrs);
     }
+
     public WordGridView(Context context, AttributeSet attrs) {
         super(context, attrs);
         mMyAdapter = new MyAdapter();
@@ -35,36 +39,46 @@ public class WordGridView extends GridView {
         this.setAdapter(mMyAdapter);
     }
 
-    public void updateData(ArrayList<WordButton> list){
+    public void updateData(ArrayList<WordButton> list) {
         mArrayList = list;
         setAdapter(mMyAdapter);
         mMyAdapter.notifyDataSetChanged();
     }
 
-    class MyAdapter extends BaseAdapter{
+    class MyAdapter extends BaseAdapter {
         @Override
         public int getCount() {
             return mArrayList.size();
         }
+
         @Override
         public Object getItem(int i) {
             return mArrayList.get(i);
         }
+
         @Override
         public long getItemId(int i) {
             return i;
         }
+
         @Override
         public View getView(int i, View v, ViewGroup viewGroup) {
-            WordButton holder = null;
-            if(v == null) {
+            final WordButton holder;
+            if (v == null) {
                 v = ViewUtil.getView(mContext, R.layout.gridview_item);
                 holder = mArrayList.get(i);
                 holder.mIndex = i;
                 holder.mViewButton = (Button) v.findViewById(R.id.item_btn);
                 v.setTag(holder);
                 mScaleAnimation = AnimationUtils.loadAnimation(mContext, R.anim.scale);
-                mScaleAnimation.setStartOffset((int)(i * mScaleAnimation.getDuration() * 0.5));
+                mScaleAnimation.setStartOffset((int) (i * mScaleAnimation.getDuration() * 0.5));
+                holder.mViewButton.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (mListener != null)
+                            mListener.onClick(holder);
+                    }
+                });
             } else {
                 holder = (WordButton) v.getTag();
             }
@@ -72,5 +86,9 @@ public class WordGridView extends GridView {
             v.startAnimation(mScaleAnimation);
             return v;
         }
+    }
+
+    public void setOnWordButtonClickeListener(WordButtonClickListener listener) {
+        mListener = listener;
     }
 }

@@ -3,6 +3,7 @@ package cn.geekduxu.xguesssong.ui;
 import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -13,15 +14,20 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
+import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 import cn.geekduxu.xguesssong.R;
+import cn.geekduxu.xguesssong.data.Const;
+import cn.geekduxu.xguesssong.model.Music;
 import cn.geekduxu.xguesssong.model.WordButton;
+import cn.geekduxu.xguesssong.model.WordButtonClickListener;
 import cn.geekduxu.xguesssong.model.WordGridView;
 import cn.geekduxu.xguesssong.util.ViewUtil;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements WordButtonClickListener {
 
     private static final int WORDS_COUNT = 24;
 
@@ -54,6 +60,9 @@ public class MainActivity extends Activity {
      */
     private boolean mIsRunning;
 
+    private Music mCurrentMusic;
+    private int mCurrentIndex = 0;
+
     /**
      * 文字框容器
      */
@@ -74,6 +83,8 @@ public class MainActivity extends Activity {
 
         mGridView = (WordGridView) findViewById(R.id.gridview);
         mViewWordsContainer = (LinearLayout) findViewById(R.id.word_select_container);
+
+        mGridView.setOnWordButtonClickeListener(this);
 
         //anim init here.
         mPanAnim = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate);
@@ -145,9 +156,53 @@ public class MainActivity extends Activity {
         });
 
         initCurrentStageData();
+
+
+    }
+
+    @Override
+    public void onClick(WordButton btn) {
+        setSelectedWord(btn);
+    }
+
+    private void clearAnswer(WordButton button){
+        button.mViewButton.setText("");
+        button.mWordString = "";
+        setButtonVisiable(mAllWords.get(button.mIndex), View.VISIBLE);
+    }
+
+    private void setSelectedWord(WordButton button) {
+        for (int i = 0; i < mSelectedWords.size(); i++) {
+            if(TextUtils.isEmpty(mSelectedWords.get(i).mWordString)){
+                mSelectedWords.get(i).mViewButton.setText(button.mWordString + "");
+                mSelectedWords.get(i).mIsVisiable = true;
+                mSelectedWords.get(i).mWordString = button.mWordString;
+                mSelectedWords.get(i).mIndex = button.mIndex;
+
+                setButtonVisiable(button, View.INVISIBLE);
+                break;
+            }
+        }
+    }
+
+    private void setButtonVisiable(WordButton button, int visibility){
+        button.mViewButton.setVisibility(visibility);
+        button.mIsVisiable = (visibility == View.VISIBLE);
+    }
+
+    private Music loadStageMusicInfo(int index) {
+        Music music = new Music();
+        String[] infos = Const.SONG_INFO[index];
+        music.setFilename(infos[0]);
+        music.setMode(Integer.parseInt(infos[1]));
+        music.setMusicName(infos[2]);
+        return music;
     }
 
     private void initCurrentStageData() {
+
+        mCurrentMusic = loadStageMusicInfo(mCurrentIndex++);
+
         mSelectedWords = initSelectedWords();
         LayoutParams params = new LayoutParams(60, 60);
         for (WordButton btn : mSelectedWords) {
@@ -156,7 +211,6 @@ public class MainActivity extends Activity {
 
         mAllWords = initAllWords();
         mGridView.updateData(mAllWords);
-
 
     }
 
@@ -167,14 +221,21 @@ public class MainActivity extends Activity {
      */
     private ArrayList<WordButton> initSelectedWords() {
         ArrayList<WordButton> data = new ArrayList<WordButton>();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < mCurrentMusic.getNameLength(); i++) {
             View v = ViewUtil.getView(MainActivity.this, R.layout.gridview_item);
-            WordButton holder = new WordButton();
+            final WordButton holder = new WordButton();
             holder.mViewButton = (android.widget.Button) v.findViewById(R.id.item_btn);
             holder.mViewButton.setTextColor(Color.WHITE);
             holder.mViewButton.setText("");
             holder.mIsVisiable = false;
             holder.mViewButton.setBackgroundResource(R.drawable.game_wordblank);
+
+            holder.mViewButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    clearAnswer(holder);
+                }
+            });
             data.add(holder);
         }
         return data;
@@ -185,9 +246,10 @@ public class MainActivity extends Activity {
      */
     private ArrayList<WordButton> initAllWords() {
         ArrayList<WordButton> data = new ArrayList<WordButton>(WORDS_COUNT);
+        char[] words = generateWords();
         for (int i = 0; i < WORDS_COUNT; i++) {
             WordButton button = new WordButton();
-            button.mWordString = "好";
+            button.mWordString = words[i] + "";
             data.add(button);
         }
         return data;
@@ -203,8 +265,42 @@ public class MainActivity extends Activity {
         mBtnPlayStart.setVisibility(View.INVISIBLE);
     }
 
+    private char[] generateWords() {
+        char[] words = new char[WORDS_COUNT];
+        for (int i = 0; i < mCurrentMusic.getNameLength(); i++) {
+            words[i] = mCurrentMusic.getNameArray()[i];
+        }
+        for (int i = mCurrentMusic.getNameLength(); i < WORDS_COUNT; i++) {
+            words[i] = getRandomChar();
+        }
+        Random r = new Random();
+        for (int i = WORDS_COUNT - 1; i >= 0; i--) {
+            int index = r.nextInt(i + 1);
+            char buf = words[index];
+            words[index] = words[i];
+            words[i] = buf;
+        }
+        return words;
+    }
+
+    private char getRandomChar() {
+        int high, low;
+        Random r = new Random();
+        high = (176 + Math.abs(r.nextInt(39)));
+        low = (161 + Math.abs(r.nextInt(93)));
+        byte[] b = new byte[2];
+        b[0] = Integer.valueOf(high).byteValue();
+        b[1] = Integer.valueOf(low).byteValue();
+        try {
+            return new String(b, "GBK").charAt(0);
+        } catch (Exception e) {
+        }
+        return ' ';
+    }
+
     @Override
     protected void onPause() {
+        super.onPause();
         try {
             mViewPan.clearAnimation();
         } catch (Exception e) {
@@ -226,4 +322,5 @@ public class MainActivity extends Activity {
         }
         return super.onOptionsItemSelected(item);
     }
+
 }
