@@ -64,31 +64,28 @@ public class WordGridView extends GridView {
         @Override
         public View getView(int i, View v, ViewGroup viewGroup) {
             final WordButton holder;
-            if (v == null) {
-                v = ViewUtil.getView(mContext, R.layout.gridview_item);
-                holder = mArrayList.get(i);
-                holder.mIndex = i;
-                holder.mViewButton = (Button) v.findViewById(R.id.item_btn);
-                v.setTag(holder);
-                mScaleAnimation = AnimationUtils.loadAnimation(mContext, R.anim.scale);
-                mScaleAnimation.setStartOffset((int) (i * mScaleAnimation.getDuration() * 0.5));
-                holder.mViewButton.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        if (mListener != null)
-                            mListener.onClick(holder);
-                    }
-                });
-            } else {
-                holder = (WordButton) v.getTag();
-            }
+            View view = ViewUtil.getView(mContext, R.layout.gridview_item);
+            holder = mArrayList.get(i);
+            holder.mIndex = i;
+            holder.mViewButton = (Button) view.findViewById(R.id.item_btn);
+            view.setTag(holder);
+            mScaleAnimation = AnimationUtils.loadAnimation(mContext, R.anim.scale);
+            mScaleAnimation.setStartOffset((int) (i * mScaleAnimation.getDuration() * 0.5));
+            holder.mViewButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View vw) {
+                    if (mListener != null)
+                        mListener.onWordButtonClick(holder);
+                }
+            });
+
             holder.mViewButton.setText(holder.mWordString);
-            v.startAnimation(mScaleAnimation);
-            return v;
+            view.startAnimation(mScaleAnimation);
+            return view;
         }
     }
 
-    public void setOnWordButtonClickeListener(WordButtonClickListener listener) {
+    public void setOnWordButtonClickedListener(WordButtonClickListener listener) {
         mListener = listener;
     }
 }

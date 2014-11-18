@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Button xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/item_btn"
-    android:text="d"
     android:textColor="#000000"
     android:textSize="22sp"
     android:background="@drawable/word_button_icon"

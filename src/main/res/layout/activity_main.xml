@@ -15,5 +15,7 @@
 
     </LinearLayout>
 
+    <include layout="@layout/float_buttons" />
+    <include layout="@layout/answer_right" />
 
 </FrameLayout>

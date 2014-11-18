@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LinearInterpolator;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -18,6 +19,8 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import cn.geekduxu.xguesssong.R;
 import cn.geekduxu.xguesssong.data.Const;
@@ -30,6 +33,11 @@ import cn.geekduxu.xguesssong.util.ViewUtil;
 public class MainActivity extends Activity implements WordButtonClickListener {
 
     private static final int WORDS_COUNT = 24;
+    private static final int SPASH_TIMES = 7;
+
+    private static final int STATUS_ANSWER_RIGHT = 1;
+    private static final int STATUS_ANSWER_WRONG = 2;
+    private static final int STATUS_ANSWER_LACK = 3;
 
     /**
      * 盘片动画
@@ -42,6 +50,11 @@ public class MainActivity extends Activity implements WordButtonClickListener {
      */
     private Animation mBarInAnim;
     private LinearInterpolator mBarInLin;
+
+    /**
+     * 过关界面
+     */
+    private LinearLayout mPassView;
 
     /**
      * 拨杆出去动画
@@ -72,7 +85,6 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     private ArrayList<WordButton> mSelectedWords;
     private LinearLayout mViewWordsContainer;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,9 +96,23 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         mGridView = (WordGridView) findViewById(R.id.gridview);
         mViewWordsContainer = (LinearLayout) findViewById(R.id.word_select_container);
 
-        mGridView.setOnWordButtonClickeListener(this);
+        mGridView.setOnWordButtonClickedListener(this);
 
         //anim init here.
+        initAnims();
+
+        mBtnPlayStart = (ImageButton) findViewById(R.id.btn_play_start);
+        mBtnPlayStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                handlePlay();
+            }
+        });
+
+        initCurrentStageData();
+    }
+
+    private void initAnims() {
         mPanAnim = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate);
         mPanLin = new LinearInterpolator();
         mPanAnim.setInterpolator(mPanLin);
@@ -146,34 +172,82 @@ public class MainActivity extends Activity implements WordButtonClickListener {
             public void onAnimationRepeat(Animation animation) {
             }
         });
-
-        mBtnPlayStart = (ImageButton) findViewById(R.id.btn_play_start);
-        mBtnPlayStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                handlePlay();
-            }
-        });
-
-        initCurrentStageData();
-
-
     }
 
     @Override
-    public void onClick(WordButton btn) {
+    public void onWordButtonClick(WordButton btn) {
         setSelectedWord(btn);
+        switch (checkAnswer()) {
+            case STATUS_ANSWER_RIGHT:
+                handlePassEvent();
+                break;
+            case STATUS_ANSWER_WRONG:
+                sparkWords();
+                Toast.makeText(this, "答案错误", Toast.LENGTH_SHORT).show();
+                break;
+            case STATUS_ANSWER_LACK:
+                for (int i = 0; i < mSelectedWords.size(); i++)
+                    mSelectedWords.get(i).mViewButton.setTextColor(Color.WHITE);
+                break;
+        }
     }
 
-    private void clearAnswer(WordButton button){
+    private void handlePassEvent() {
+//        mPassView = (LinearLayout) findViewById(R.id.pass_view);
+//        mPassView.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * 文字闪烁
+     */
+    private void sparkWords() {
+        TimerTask task = new TimerTask() {
+            boolean mChange;
+            int mSpardTimes;
+
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mSpardTimes++ > SPASH_TIMES)
+                            return;
+                        for (int i = 0; i < mSelectedWords.size(); i++) {
+                            mSelectedWords.get(i).mViewButton.setTextColor(mChange ? Color.RED : Color.WHITE);
+                        }
+                        mChange = !mChange;
+                    }
+                });
+            }
+        };
+        Timer timer = new Timer();
+        timer.schedule(task, 1, 150);
+    }
+
+    private int checkAnswer() {
+        StringBuilder answer = new StringBuilder();
+        for (int i = 0; i < mSelectedWords.size(); i++) {
+            WordButton btn = mSelectedWords.get(i);
+            if (TextUtils.isEmpty(btn.mWordString))
+                return STATUS_ANSWER_LACK;
+            answer.append(btn.mWordString);
+        }
+        return answer.toString().equals(mCurrentMusic.getMusicName())
+                ? STATUS_ANSWER_RIGHT : STATUS_ANSWER_WRONG;
+    }
+
+    private void clearAnswer(WordButton button) {
         button.mViewButton.setText("");
         button.mWordString = "";
         setButtonVisiable(mAllWords.get(button.mIndex), View.VISIBLE);
+        for (int i = 0; i < mSelectedWords.size(); i++)
+            mSelectedWords.get(i).mViewButton.setTextColor(Color.WHITE);
     }
 
     private void setSelectedWord(WordButton button) {
+
         for (int i = 0; i < mSelectedWords.size(); i++) {
-            if(TextUtils.isEmpty(mSelectedWords.get(i).mWordString)){
+            if (TextUtils.isEmpty(mSelectedWords.get(i).mWordString)) {
                 mSelectedWords.get(i).mViewButton.setText(button.mWordString + "");
                 mSelectedWords.get(i).mIsVisiable = true;
                 mSelectedWords.get(i).mWordString = button.mWordString;
@@ -185,11 +259,12 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         }
     }
 
-    private void setButtonVisiable(WordButton button, int visibility){
+    private void setButtonVisiable(WordButton button, int visibility) {
         button.mViewButton.setVisibility(visibility);
         button.mIsVisiable = (visibility == View.VISIBLE);
     }
 
+    //TODO override it, random generate music info
     private Music loadStageMusicInfo(int index) {
         Music music = new Music();
         String[] infos = Const.SONG_INFO[index];
@@ -200,24 +275,18 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     }
 
     private void initCurrentStageData() {
-
         mCurrentMusic = loadStageMusicInfo(mCurrentIndex++);
-
         mSelectedWords = initSelectedWords();
         LayoutParams params = new LayoutParams(60, 60);
         for (WordButton btn : mSelectedWords) {
             mViewWordsContainer.addView(btn.mViewButton, params);
         }
-
         mAllWords = initAllWords();
         mGridView.updateData(mAllWords);
-
     }
 
     /**
      * 初始化已选择文字框
-     *
-     * @return
      */
     private ArrayList<WordButton> initSelectedWords() {
         ArrayList<WordButton> data = new ArrayList<WordButton>();
@@ -228,6 +297,7 @@ public class MainActivity extends Activity implements WordButtonClickListener {
             holder.mViewButton.setTextColor(Color.WHITE);
             holder.mViewButton.setText("");
             holder.mIsVisiable = false;
+            holder.mIndex = -1;
             holder.mViewButton.setBackgroundResource(R.drawable.game_wordblank);
 
             holder.mViewButton.setOnClickListener(new View.OnClickListener() {
@@ -259,7 +329,6 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         if (mIsRunning) {
             return;
         }
-        System.out.println("handlePlay : " + mIsRunning);
         mIsRunning = true;
         mViewPanBar.startAnimation(mBarInAnim);
         mBtnPlayStart.setVisibility(View.INVISIBLE);

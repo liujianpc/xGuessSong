@@ -1,6 +1,5 @@
 package cn.geekduxu.xguesssong.model;
 
-import android.content.Context;
 import android.widget.Button;
 
 /**
