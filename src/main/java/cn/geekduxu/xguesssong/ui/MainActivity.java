@@ -94,7 +94,10 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     private int mCurrentCoins = Const.TOTAL_COINS;
 
     private TextView mViewCoins;
+
     private TextView mViewCurrentStage;
+    private TextView mViewCurrentStagePass;
+
     private TextView mViewCurrentMusicName;
 
     private ImageView mViewDelete;
@@ -278,15 +281,38 @@ public class MainActivity extends Activity implements WordButtonClickListener {
 
     private void handlePassEvent() {
         mPassView = (LinearLayout) findViewById(R.id.pass_view);
-        mPassView.setVisibility(View.VISIBLE);
 
         mViewPan.clearAnimation();
 
-        mViewCurrentStage = (TextView) findViewById(R.id.text_current_stage_pass);
-        mViewCurrentStage.setText((mCurrentIndex + 1) + "");
+        mViewCurrentStagePass = (TextView) findViewById(R.id.text_current_stage_pass);
+        mViewCurrentStagePass.setText(mCurrentIndex + "");
 
         mViewCurrentMusicName = (TextView) findViewById(R.id.text_currnt_song_name);
         mViewCurrentMusicName.setText(mCurrentMusic.getMusicName());
+
+        ImageButton btnPass = (ImageButton) findViewById(R.id.btn_next);
+        btnPass.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(!Const.hasMoreMusic()){
+                    //进入通关界面
+                    return;
+                }
+                //开始新的关卡
+                mPassView.setVisibility(View.INVISIBLE);
+                initCurrentStageData();
+            }
+        });
+        ImageButton btnShare = (ImageButton) findViewById(R.id.btn_share);
+        btnShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(MainActivity.this, "share to wechat.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+
+        mPassView.setVisibility(View.VISIBLE);
     }
 
     /**
@@ -357,6 +383,11 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     }
 
     //TODO override it, random generate music info
+
+    /**
+     * @see cn.geekduxu.xguesssong.data.Const
+     */
+    @Deprecated
     private Music loadStageMusicInfo(int index) {
         Music music = new Music();
         String[] infos = Const.SONG_INFO[index];
@@ -367,14 +398,25 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     }
 
     private void initCurrentStageData() {
-        mCurrentMusic = loadStageMusicInfo(mCurrentIndex++);
+//        mCurrentMusic = loadStageMusicInfo(mCurrentIndex++);
+        mCurrentMusic = Const.loadNextMusic();
+        Log.i("duxu", "song name:" + mCurrentMusic.getMusicName());
         mSelectedWords = initSelectedWords();
         LayoutParams params = new LayoutParams(60, 60);
+
+        mViewWordsContainer.removeAllViews();
+
         for (WordButton btn : mSelectedWords) {
             mViewWordsContainer.addView(btn.mViewButton, params);
         }
+
+        mViewCurrentStage = (TextView) findViewById(R.id.txt_current_stage);
+        mViewCurrentStage.setText((mCurrentIndex+1) + "");
+
         mAllWords = initAllWords();
         mGridView.updateData(mAllWords);
+
+        mCurrentIndex++;
     }
 
     /**

@@ -1,5 +1,11 @@
 package cn.geekduxu.xguesssong.data;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+
+import cn.geekduxu.xguesssong.model.Music;
+
 public class Const {
 
     public static final int TOTAL_COINS = 1000;
@@ -17,5 +23,27 @@ public class Const {
             {"__00009.m4a", "1", "老男孩"},
             {"__00010.m4a", "1", "龙的传人"},
     };
+
+    private static List<Integer> MUSICS_LIST;
+    static {
+        MUSICS_LIST = new LinkedList<Integer>();
+        for(int i = 0; i < SONG_INFO.length; i++){
+            MUSICS_LIST.add(i);
+        }
+    }
+
+    public static Music loadNextMusic(){
+        Music music = new Music();
+        int idx = new Random().nextInt(MUSICS_LIST.size());
+        int pos = MUSICS_LIST.remove(idx);
+        music.setFilename(SONG_INFO[pos][0]);
+        music.setMode(Integer.parseInt(SONG_INFO[pos][1]));
+        music.setMusicName(SONG_INFO[pos][2]);
+        return music;
+    }
+
+    public static boolean hasMoreMusic(){
+        return  MUSICS_LIST.size() > 0;
+    }
 
 }
