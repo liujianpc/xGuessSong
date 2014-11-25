@@ -2,6 +2,8 @@ package cn.geekduxu.xguesssong.data;
 
 public class Const {
 
+    public static final int TOTAL_COINS = 1000;
+
     public static final String SONG_INFO[][] = {
             {"__00000.m4a", "1", "征服"},
             {"__00001.m4a", "1", "童话"},

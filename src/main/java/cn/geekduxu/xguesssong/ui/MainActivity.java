@@ -4,20 +4,23 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LinearInterpolator;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -85,6 +88,18 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     private ArrayList<WordButton> mSelectedWords;
     private LinearLayout mViewWordsContainer;
 
+    /**
+     * 当前金币数量
+     */
+    private int mCurrentCoins = Const.TOTAL_COINS;
+
+    private TextView mViewCoins;
+    private TextView mViewCurrentStage;
+    private TextView mViewCurrentMusicName;
+
+    private ImageView mViewDelete;
+    private ImageView mViewTip;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,6 +110,24 @@ public class MainActivity extends Activity implements WordButtonClickListener {
 
         mGridView = (WordGridView) findViewById(R.id.gridview);
         mViewWordsContainer = (LinearLayout) findViewById(R.id.word_select_container);
+
+        mViewCoins = (TextView) findViewById(R.id.txt_bar_icon);
+        mViewCoins.setText(mCurrentCoins + "");
+
+        mViewDelete = (ImageView) findViewById(R.id.btn_delete_word);
+        mViewDelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                deleteWord();
+            }
+        });
+        mViewTip = (ImageView) findViewById(R.id.btn_tip_answer);
+        mViewTip.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                tipAnswer();
+            }
+        });
 
         mGridView.setOnWordButtonClickedListener(this);
 
@@ -110,6 +143,57 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         });
 
         initCurrentStageData();
+
+
+        for (int i = 0; i < WORDS_COUNT; i++) {
+            toRand.add(i);
+        }
+    }
+
+    private void deleteWord() {
+        if (!handleCoins(-getResources().getInteger(R.integer.pay_delete_answer))) {
+            return;
+        }
+        WordButton btn = findNotAnswerButton();
+        if (btn != null) {
+            setButtonVisiable(btn, View.INVISIBLE);
+        }
+    }
+
+    private void tipAnswer(){
+        if (!handleCoins(-getResources().getInteger(R.integer.pay_tip_answer))) {
+            return;
+        }
+        char[] name = mCurrentMusic.getNameArray();
+        int pos = new Random().nextInt(name.length);
+        Toast.makeText(MainActivity.this, "答案中的一个字是：" + name[pos], Toast.LENGTH_SHORT).show();
+    }
+
+    private List<Integer> toRand = new LinkedList<Integer>();
+    private WordButton findNotAnswerButton() {
+        Random r = new Random();
+        WordButton btn;
+        while (true) {
+            try {
+                int idx = toRand.remove(r.nextInt(toRand.size()));
+                btn = mAllWords.get(idx);
+                Log.i("duxu", "while loop, rand : " + idx + ", music name:" + mCurrentMusic.getMusicName() + ", btn string:" + btn.mWordString);
+                if (btn.mIsVisiable && !mCurrentMusic.getMusicName().contains(btn.mWordString)) {
+                    return btn;
+                }
+            } catch (Exception e) {
+                return null;
+            }
+        }
+    }
+
+    private boolean handleCoins(int data) {
+        if (mCurrentCoins + data >= 0) {
+            mCurrentCoins += data;
+            mViewCoins.setText(mCurrentCoins + "");
+            return true;
+        }
+        return false;
     }
 
     private void initAnims() {
@@ -193,8 +277,16 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     }
 
     private void handlePassEvent() {
-//        mPassView = (LinearLayout) findViewById(R.id.pass_view);
-//        mPassView.setVisibility(View.VISIBLE);
+        mPassView = (LinearLayout) findViewById(R.id.pass_view);
+        mPassView.setVisibility(View.VISIBLE);
+
+        mViewPan.clearAnimation();
+
+        mViewCurrentStage = (TextView) findViewById(R.id.text_current_stage_pass);
+        mViewCurrentStage.setText((mCurrentIndex + 1) + "");
+
+        mViewCurrentMusicName = (TextView) findViewById(R.id.text_currnt_song_name);
+        mViewCurrentMusicName.setText(mCurrentMusic.getMusicName());
     }
 
     /**
