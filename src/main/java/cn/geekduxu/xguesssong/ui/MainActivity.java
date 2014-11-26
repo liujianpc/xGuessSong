@@ -1,6 +1,8 @@
 package cn.geekduxu.xguesssong.ui;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -27,10 +29,12 @@ import java.util.TimerTask;
 
 import cn.geekduxu.xguesssong.R;
 import cn.geekduxu.xguesssong.data.Const;
+import cn.geekduxu.xguesssong.model.DialogButtonClickListener;
 import cn.geekduxu.xguesssong.model.Music;
 import cn.geekduxu.xguesssong.model.WordButton;
 import cn.geekduxu.xguesssong.model.WordButtonClickListener;
 import cn.geekduxu.xguesssong.model.WordGridView;
+import cn.geekduxu.xguesssong.util.SoundPlayUtil;
 import cn.geekduxu.xguesssong.util.ViewUtil;
 
 public class MainActivity extends Activity implements WordButtonClickListener {
@@ -41,6 +45,10 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     private static final int STATUS_ANSWER_RIGHT = 1;
     private static final int STATUS_ANSWER_WRONG = 2;
     private static final int STATUS_ANSWER_LACK = 3;
+
+    private static final int ID_DIALOG_TIP_ANSWER = 4;
+    private static final int ID_DIALOG_DEL_ANSWER = 5;
+    private static final int ID_DIALOG_LACK_COINS = 6;
 
     /**
      * 盘片动画
@@ -68,6 +76,8 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     //play button
     private ImageButton mBtnPlayStart;
 
+    private ImageButton mBtnAddCoins;
+
     private ImageView mViewPan;
     private ImageView mViewPanBar;
 
@@ -91,9 +101,13 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     /**
      * 当前金币数量
      */
-    private int mCurrentCoins = Const.TOTAL_COINS;
+    private int mCurrentCoins;
 
     private TextView mViewCoins;
+
+    private TextView mViewPassPercent;
+
+    private TextView mViewGuessMode;
 
     private TextView mViewCurrentStage;
     private TextView mViewCurrentStagePass;
@@ -103,10 +117,15 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     private ImageView mViewDelete;
     private ImageView mViewTip;
 
+    private SharedPreferences sp;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        sp = getSharedPreferences("config", MODE_PRIVATE);
+        mCurrentCoins = Integer.parseInt(sp.getString("coins", "200"));
 
         mViewPan = (ImageView) findViewById(R.id.iv_pan);
         mViewPanBar = (ImageView) findViewById(R.id.iv_pan_bar);
@@ -114,7 +133,16 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         mGridView = (WordGridView) findViewById(R.id.gridview);
         mViewWordsContainer = (LinearLayout) findViewById(R.id.word_select_container);
 
+        findViewById(R.id.btn_bar_back).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
+
         mViewCoins = (TextView) findViewById(R.id.txt_bar_icon);
+        mViewGuessMode = (TextView) findViewById(R.id.tv_mode);
+
         mViewCoins.setText(mCurrentCoins + "");
 
         mViewDelete = (ImageView) findViewById(R.id.btn_delete_word);
@@ -151,28 +179,74 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         for (int i = 0; i < WORDS_COUNT; i++) {
             toRand.add(i);
         }
+
+        mBtnAddCoins = (ImageButton) findViewById(R.id.btn_bar_add_coins);
+        mBtnAddCoins.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //TODO 增加金币
+                dealCoins(100);
+            }
+        });
     }
 
     private void deleteWord() {
         if (!handleCoins(-getResources().getInteger(R.integer.pay_delete_answer))) {
+            showMDialog(ID_DIALOG_LACK_COINS, null);
             return;
         }
-        WordButton btn = findNotAnswerButton();
-        if (btn != null) {
-            setButtonVisiable(btn, View.INVISIBLE);
+        showMDialog(ID_DIALOG_DEL_ANSWER, new DialogButtonClickListener() {
+            @Override
+            public void onClick() {
+                WordButton btn = findNotAnswerButton();
+                if (btn != null) {
+                    setButtonVisiable(btn, View.INVISIBLE);
+                }
+                dealCoins(-getResources().getInteger(R.integer.pay_delete_answer));
+            }
+        });
+    }
+
+    private void tipAnswer() {
+        if (!handleCoins(-getResources().getInteger(R.integer.pay_tip_answer))) {
+            showMDialog(ID_DIALOG_LACK_COINS, null);
+            return;
+        }
+        showMDialog(ID_DIALOG_TIP_ANSWER, new DialogButtonClickListener() {
+            @Override
+            public void onClick() {
+                char[] name = mCurrentMusic.getNameArray();
+                int pos = new Random().nextInt(name.length);
+                Toast.makeText(MainActivity.this, "答案中的一个字是：" + name[pos], Toast.LENGTH_SHORT).show();
+                dealCoins(-getResources().getInteger(R.integer.pay_tip_answer));
+            }
+        });
+    }
+
+    private void showMDialog(int id, DialogButtonClickListener listener) {
+        switch (id) {
+            case ID_DIALOG_TIP_ANSWER:
+                ViewUtil.showDialog(MainActivity.this, "确认花费90个金币获得一个文字提示？", listener);
+                break;
+            case ID_DIALOG_DEL_ANSWER:
+                ViewUtil.showDialog(MainActivity.this, "确认花费30个金币去掉一个错误答案？", listener);
+                break;
+            case ID_DIALOG_LACK_COINS:
+                ViewUtil.showDialog(MainActivity.this, "金币不足，立刻去商店补充？", lackCoinsListener);
+                break;
         }
     }
 
-    private void tipAnswer(){
-        if (!handleCoins(-getResources().getInteger(R.integer.pay_tip_answer))) {
-            return;
+    private DialogButtonClickListener lackCoinsListener = new DialogButtonClickListener() {
+        @Override
+        public void onClick() {
+            //TODO 去商店
+            Toast.makeText(MainActivity.this, "shop", Toast.LENGTH_SHORT).show();
         }
-        char[] name = mCurrentMusic.getNameArray();
-        int pos = new Random().nextInt(name.length);
-        Toast.makeText(MainActivity.this, "答案中的一个字是：" + name[pos], Toast.LENGTH_SHORT).show();
-    }
+    };
 
     private List<Integer> toRand = new LinkedList<Integer>();
+
     private WordButton findNotAnswerButton() {
         Random r = new Random();
         WordButton btn;
@@ -190,13 +264,16 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         }
     }
 
+    private void dealCoins(int count) {
+        mCurrentCoins += count;
+        SharedPreferences.Editor et = sp.edit();
+        et.putString("coins", mCurrentCoins + "");
+        et.commit();
+        mViewCoins.setText(mCurrentCoins + "");
+    }
+
     private boolean handleCoins(int data) {
-        if (mCurrentCoins + data >= 0) {
-            mCurrentCoins += data;
-            mViewCoins.setText(mCurrentCoins + "");
-            return true;
-        }
-        return false;
+        return mCurrentCoins + data >= 0;
     }
 
     private void initAnims() {
@@ -206,6 +283,7 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         mPanAnim.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
+                SoundPlayUtil.playMusic(MainActivity.this, mCurrentMusic.getFilename());
             }
 
             @Override
@@ -283,6 +361,8 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         mPassView = (LinearLayout) findViewById(R.id.pass_view);
 
         mViewPan.clearAnimation();
+        SoundPlayUtil.pause(MainActivity.this);
+        SoundPlayUtil.playTone(MainActivity.this, SoundPlayUtil.INDEX_STONE_COIN);
 
         mViewCurrentStagePass = (TextView) findViewById(R.id.text_current_stage_pass);
         mViewCurrentStagePass.setText(mCurrentIndex + "");
@@ -294,8 +374,11 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         btnPass.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(!Const.hasMoreMusic()){
+                //TODO 修改通关 （为测试方便直接通关了）
+                if (!Const.hasMoreMusic()) {
                     //进入通关界面
+                    startActivity(new Intent(MainActivity.this, PassActivity.class));
+//                    finish();
                     return;
                 }
                 //开始新的关卡
@@ -311,7 +394,8 @@ public class MainActivity extends Activity implements WordButtonClickListener {
             }
         });
 
-
+        dealCoins(50);
+        ((TextView)findViewById(R.id.txt_main_achievement)).setText("您已经完成进度：" + mCurrentIndex + "/" + Const.SONG_INFO.length);
         mPassView.setVisibility(View.VISIBLE);
     }
 
@@ -322,7 +406,6 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         TimerTask task = new TimerTask() {
             boolean mChange;
             int mSpardTimes;
-
             @Override
             public void run() {
                 runOnUiThread(new Runnable() {
@@ -382,8 +465,6 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         button.mIsVisiable = (visibility == View.VISIBLE);
     }
 
-    //TODO override it, random generate music info
-
     /**
      * @see cn.geekduxu.xguesssong.data.Const
      */
@@ -411,12 +492,15 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         }
 
         mViewCurrentStage = (TextView) findViewById(R.id.txt_current_stage);
-        mViewCurrentStage.setText((mCurrentIndex+1) + "");
+        mViewCurrentStage.setText((mCurrentIndex + 1) + "");
 
         mAllWords = initAllWords();
         mGridView.updateData(mAllWords);
 
+        mViewGuessMode.setText(Music.getModeString(mCurrentMusic.getMode()));
+
         mCurrentIndex++;
+        handlePlay();
     }
 
     /**
@@ -466,6 +550,7 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         mIsRunning = true;
         mViewPanBar.startAnimation(mBarInAnim);
         mBtnPlayStart.setVisibility(View.INVISIBLE);
+//        SoundPlayUtil.playMusic(MainActivity.this, mCurrentMusic.getFilename());
     }
 
     private char[] generateWords() {
@@ -473,6 +558,7 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         for (int i = 0; i < mCurrentMusic.getNameLength(); i++) {
             words[i] = mCurrentMusic.getNameArray()[i];
         }
+        //TODO 初始化随机生成文字（重复）
         for (int i = mCurrentMusic.getNameLength(); i < WORDS_COUNT; i++) {
             words[i] = getRandomChar();
         }
@@ -506,6 +592,7 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         super.onPause();
         try {
             mViewPan.clearAnimation();
+            SoundPlayUtil.pause(MainActivity.this);
         } catch (Exception e) {
         }
     }

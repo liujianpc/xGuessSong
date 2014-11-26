@@ -7,8 +7,8 @@ public class Music {
     private int mNameLength;
     private int mMode;
 
-    public char[] getNameArray(){
-        return  mMusicName.toCharArray();
+    public char[] getNameArray() {
+        return mMusicName.toCharArray();
     }
 
     public String getFilename() {
@@ -38,5 +38,17 @@ public class Music {
 
     public void setMode(int mode) {
         this.mMode = mode;
+    }
+
+    public static String getModeString(int mode) {
+        switch (mode) {
+            case 1:
+                return "猜歌名";
+            case 2:
+                return "猜歌手";
+            case 3:
+                return "猜下一句";
+        }
+        return "";
     }
 }
