@@ -1,5 +1,10 @@
 package cn.geekduxu.xguesssong.data;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.util.Log;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -72,27 +77,31 @@ public class Const {
             {"V694572_1.mp3", "1", "沙龙"},
     };
 
-    private static List<Integer> MUSICS_LIST;
+   /* private static List<Integer> MUSICS_LIST;
 
     static {
         MUSICS_LIST = new LinkedList<Integer>();
         for (int i = 0; i < SONG_INFO.length; i++) {
             MUSICS_LIST.add(i);
         }
-    }
+    }*/
 
-    public static Music loadNextMusic() {
+    public static Music loadNextMusic(Context context) {
+
+        SharedPreferences sp = context.getSharedPreferences("config", Context.MODE_PRIVATE);
+        String s = sp.getString("done", "0");
+        int pos = Integer.parseInt(s);
+
         Music music = new Music();
-        int idx = new Random().nextInt(MUSICS_LIST.size());
-        int pos = MUSICS_LIST.remove(idx);
         music.setFilename(SONG_INFO[pos][0]);
         music.setMode(Integer.parseInt(SONG_INFO[pos][1]));
         music.setMusicName(SONG_INFO[pos][2]);
+
         return music;
     }
 
-    public static boolean hasMoreMusic() {
-        return MUSICS_LIST.size() > 0;
+    public static boolean hasMoreMusic(int done) {
+        return done < SONG_INFO.length - 1;
     }
 
 }

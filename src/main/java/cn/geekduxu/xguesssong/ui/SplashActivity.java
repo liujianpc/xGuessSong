@@ -17,6 +17,8 @@ import cn.geekduxu.xguesssong.R;
 
 public class SplashActivity extends Activity {
 
+    private static final int ANIM_TIME = 1000;
+
     private TextView tvTitle;
 
     @Override
@@ -29,22 +31,65 @@ public class SplashActivity extends Activity {
 
     private void init() {
         tvTitle = (TextView) findViewById(R.id.tv_show);
-        Animation anim = AnimationUtils.loadAnimation(SplashActivity.this, R.anim.splash);
-        anim.setFillAfter(true);
-        anim.setAnimationListener(new Animation.AnimationListener() {
+
+        TranslateAnimation ta = new TranslateAnimation(0, 0, 60, -60);
+        ta.setDuration(ANIM_TIME);
+        ta.setFillAfter(true);
+
+        AlphaAnimation aa = new AlphaAnimation(0.2f, 1.0f);
+        aa.setDuration(ANIM_TIME);
+        aa.setFillAfter(true);
+
+        AnimationSet as = new AnimationSet(true);
+        as.setFillAfter(true);
+        as.setInterpolator(SplashActivity.this, android.R.anim.accelerate_decelerate_interpolator);
+        as.setDuration(ANIM_TIME);
+        as.addAnimation(aa);
+        as.addAnimation(ta);
+
+        as.setAnimationListener(new Animation.AnimationListener() {
             @Override
-            public void onAnimationStart(Animation animation) {}
-            @Override
-            public void onAnimationRepeat(Animation animation) {}
+            public void onAnimationStart(Animation animation) { }
             @Override
             public void onAnimationEnd(Animation animation) {
-                startActivity(new Intent(SplashActivity.this, MainActivity.class));
-                finish();
+                TranslateAnimation ta = new TranslateAnimation(0, 0, -60, -180);
+                ta.setDuration(ANIM_TIME);
+                ta.setFillAfter(true);
+
+                AlphaAnimation aa = new AlphaAnimation(1.0f, 0.0f);
+                aa.setDuration(ANIM_TIME);
+                aa.setFillAfter(true);
+
+                AnimationSet as = new AnimationSet(true);
+                as.setFillAfter(true);
+                as.setInterpolator(SplashActivity.this, android.R.anim.accelerate_decelerate_interpolator);
+                as.setDuration(ANIM_TIME);
+                as.addAnimation(aa);
+                as.addAnimation(ta);
+
+                as.setAnimationListener(new Animation.AnimationListener() {
+                    @Override
+                    public void onAnimationStart(Animation animation) { }
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        startActivity(new Intent(SplashActivity.this, GuideActivity.class));
+                        overridePendingTransition(R.anim.alpha_out, R.anim.alpha_in);
+                        finish();
+                    }
+                    @Override
+                    public void onAnimationRepeat(Animation animation) { }
+                });
+
+                tvTitle.startAnimation(as);
             }
+            @Override
+            public void onAnimationRepeat(Animation animation) { }
         });
 
-        tvTitle.startAnimation(anim);
-
+        tvTitle.startAnimation(as);
     }
 
+    @Override
+    public void onBackPressed() {
+    }
 }

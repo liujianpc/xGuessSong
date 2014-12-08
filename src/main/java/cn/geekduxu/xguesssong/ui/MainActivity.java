@@ -126,6 +126,7 @@ public class MainActivity extends Activity implements WordButtonClickListener {
 
         sp = getSharedPreferences("config", MODE_PRIVATE);
         mCurrentCoins = Integer.parseInt(sp.getString("coins", "200"));
+        mCurrentIndex = Integer.parseInt(sp.getString("done", "0"));
 
         mViewPan = (ImageView) findViewById(R.id.iv_pan);
         mViewPanBar = (ImageView) findViewById(R.id.iv_pan_bar);
@@ -174,7 +175,6 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         });
 
         initCurrentStageData();
-
 
         for (int i = 0; i < WORDS_COUNT; i++) {
             toRand.add(i);
@@ -226,10 +226,10 @@ public class MainActivity extends Activity implements WordButtonClickListener {
     private void showMDialog(int id, DialogButtonClickListener listener) {
         switch (id) {
             case ID_DIALOG_TIP_ANSWER:
-                ViewUtil.showDialog(MainActivity.this, "确认花费90个金币获得一个文字提示？", listener);
+                ViewUtil.showDialog(MainActivity.this, "花费90金币获得一个文字提示？", listener);
                 break;
             case ID_DIALOG_DEL_ANSWER:
-                ViewUtil.showDialog(MainActivity.this, "确认花费30个金币去掉一个错误答案？", listener);
+                ViewUtil.showDialog(MainActivity.this, "花费30金币去掉一个错误答案？", listener);
                 break;
             case ID_DIALOG_LACK_COINS:
                 ViewUtil.showDialog(MainActivity.this, "金币不足，立刻去商店补充？", lackCoinsListener);
@@ -375,7 +375,7 @@ public class MainActivity extends Activity implements WordButtonClickListener {
             @Override
             public void onClick(View view) {
                 //TODO 修改通关 （为测试方便直接通关了）
-                if (!Const.hasMoreMusic()) {
+                if (!Const.hasMoreMusic(mCurrentIndex)) {
                     //进入通关界面
                     startActivity(new Intent(MainActivity.this, PassActivity.class));
 //                    finish();
@@ -397,6 +397,10 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         dealCoins(50);
         ((TextView)findViewById(R.id.txt_main_achievement)).setText("您已经完成进度：" + mCurrentIndex + "/" + Const.SONG_INFO.length);
         mPassView.setVisibility(View.VISIBLE);
+
+        SharedPreferences.Editor et = sp.edit();
+        et.putString("done", "" + mCurrentIndex);
+        et.commit();
     }
 
     /**
@@ -480,7 +484,8 @@ public class MainActivity extends Activity implements WordButtonClickListener {
 
     private void initCurrentStageData() {
 //        mCurrentMusic = loadStageMusicInfo(mCurrentIndex++);
-        mCurrentMusic = Const.loadNextMusic();
+
+        mCurrentMusic = Const.loadNextMusic(MainActivity.this);
         Log.i("duxu", "song name:" + mCurrentMusic.getMusicName());
         mSelectedWords = initSelectedWords();
         LayoutParams params = new LayoutParams(60, 60);
@@ -585,6 +590,11 @@ public class MainActivity extends Activity implements WordButtonClickListener {
         } catch (Exception e) {
         }
         return ' ';
+    }
+
+    public void share(View view){
+        //TODO share
+        Toast.makeText(MainActivity.this, "share", Toast.LENGTH_SHORT).show();
     }
 
     @Override

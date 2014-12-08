@@ -103,6 +103,7 @@
         android:id="@+id/btn_share"
         android:layout_alignParentRight="true"
         android:layout_centerVertical="true"
+        android:onClick="share"
         android:background="@drawable/share_button_icon"
         android:layout_width="50dp"
         android:layout_height="50dp" />
